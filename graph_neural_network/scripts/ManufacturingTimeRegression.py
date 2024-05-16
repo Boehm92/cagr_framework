@@ -7,7 +7,7 @@ from torch_geometric.loader import DataLoader
 from graph_neural_network.scripts.utils.HyperParameter import HyperParameter
 
 
-class MachiningFeatureLocalizer:
+class ManufacturingTimeRegression:
     def __init__(self, config, trial):
         self.max_epoch = config.max_epoch
         self.training_dataset = config.training_dataset
@@ -37,7 +37,7 @@ class MachiningFeatureLocalizer:
         print(self.device)
 
         # Configuring learning functions
-        criterion = torch.nn.CrossEntropyLoss()
+        criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(_network_model.parameters(), lr=self.hyper_parameters.learning_rate)
 
         # Setting up hyperparameter function and wandb
@@ -47,38 +47,37 @@ class MachiningFeatureLocalizer:
 
         # Training
         for epoch in range(1, self.max_epoch):
-            training_loss = _network_model.train_loss(_train_loader, criterion, optimizer)
-            val_loss = _network_model.val_loss(_val_loader, criterion)
-            train_f1, flops, params = _network_model.accuracy(_train_loader)
-            val_f1, flops, params = _network_model.accuracy(_val_loader)
-            print(val_f1, flops, params)
-            self.trial.report(val_f1, epoch)
+            loss, avg_mae_loss = _network_model.train_loss(_train_loader, criterion, optimizer)
+            training_loss, avg_mae_training_loss, avg_rmse_train_loss, avg_r2_train_loss =\
+                _network_model.val_loss(_train_loader, criterion)
+            val_loss, avg_mae_val_loss, avg_rmse_val_loss, avg_r2_val_loss = \
+                _network_model.val_loss(_val_loader, criterion)
 
-            wandb.log({'training_loss': training_loss, 'val_los': val_loss, 'train_F1': train_f1, 'val_F1': val_f1})
+            wandb.log({'loss': loss, 'training_loss': training_loss, 'val_los': val_loss,
+                       'avg_mae_loss': avg_mae_loss, 'avg_mae_training_loss': avg_mae_training_loss,
+                       'avg_mae_val_loss': avg_mae_val_loss})
 
-            if (_best_accuracy < val_f1) & ((val_loss - training_loss) < 0.04):
-                torch.save(_network_model.state_dict(), os.getenv('WEIGHTS') + '/weights.pt')
-                _best_accuracy = val_f1
-                print("Saved model due to better found accuracy")
+            # if (_best_accuracy < val_f1) & ((val_loss - training_loss) < 0.04):
+            #     torch.save(_network_model.state_dict(), os.getenv('WEIGHTS') + '/weights.pt')
+            #     _best_accuracy = val_f1
+            #     print("Saved model due to better found accuracy")
 
             if self.trial.should_prune():
                 wandb.run.summary["state"] = "pruned"
                 wandb.finish(quiet=True)
                 raise optuna.exceptions.TrialPruned()
 
-            if (train_f1 + 0.2) < val_f1:
-                wandb.run.summary["state"] = "pruned"
-                wandb.finish(quiet=True)
-                raise optuna.exceptions.TrialPruned()
+            print(f'Epoch: {epoch:03d}, loss: {loss:.4f}, training_loss: {training_loss:.4f}, val_los: {val_loss:.4f},'
+                  f'avg_mae_loss: {avg_mae_loss:.4f}, avg_mae_training_loss: {avg_mae_training_loss:.4f}, '
+                  f'avg_mae_val_loss: {avg_mae_val_loss:.4f},'
+                  f' avg_rmse_train_loss: {avg_rmse_train_loss:.4f}, avg_rmse_train_loss: {avg_rmse_val_loss:.4f},'
+                  f', avg_r2_train_loss: {avg_r2_train_loss:.4f}, avg_r2_val_loss: {avg_r2_val_loss:.4f}')
 
-            print(f'Epoch: {epoch:03d}, training_loss: {training_loss:.4f}, val_los: {val_loss:.4f}, '
-                  f'train_F1: {train_f1:.4f}, val_F1: {val_f1:.4f}')
-
-        wandb.run.summary["Final F-Score"] = val_f1
+        wandb.run.summary["Final F-Score"] = val_loss
         wandb.run.summary["state"] = "completed"
         wandb.finish(quiet=True)
 
-        return val_f1
+        return val_loss
 
     def test(self):
         _test_loader = DataLoader(self.test_dataset, batch_size=self.hyper_parameters.batch_size, shuffle=False,

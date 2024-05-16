@@ -5,12 +5,14 @@ from stl import mesh
 
 
 class MachiningFeatureLabels:
-    def __init__(self, machining_feature_list, model_id, target_directory, machining_feature_id_list):
+    def __init__(self, machining_feature_list, model_id, target_directory, machining_feature_id_list,
+                 manufacturing_time):
         self.machining_feature_list = machining_feature_list
         self.target_directory = target_directory
         self.model_id = model_id
         self.machining_feature_for_labeling = None
         self.machining_feature_id_list = machining_feature_id_list
+        self.manufacturing_time = manufacturing_time
 
     @staticmethod
     def truncate_coordinates(vertices):
@@ -72,3 +74,8 @@ class MachiningFeatureLabels:
                      self.machining_feature_id_list[machining_feature_id]])
 
         self.write_csv_file(_label_list, "bounding_box_label")
+
+    def write_manufacturing_time_file(self):
+        _label_list = [self.manufacturing_time]
+
+        self.write_csv_file(_label_list, "manufacturing_time_label")

@@ -53,13 +53,14 @@ class DataImporter(InMemoryDataset):
             for file in files:
                 file_labels = []
 
-                if file.lower().endswith('_vertices_label.csv'):
+                if file.lower().endswith('_manufacturing_time_label.csv'):
                     with open(f'{root}/{file}', 'r', encoding='utf-8') as f:
 
                         for line in f.readlines():
-                            file_labels.append(int(line.split(",")[-1]))
+                            print(line)
+                            file_labels.append(float(line))
 
-                        file_name = str(file).replace('_vertices_label.csv', '.stl')
+                        file_name = str(file).replace('_manufacturing_time_label.csv', '.stl')
                         print(file_name)
                         self.data_list.append(create_graph(root + '/' + file_name, file_labels))
         print(self.collate(self.data_list), self.processed_paths[0])

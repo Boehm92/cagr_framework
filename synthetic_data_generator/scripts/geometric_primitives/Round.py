@@ -12,10 +12,14 @@ class Round:
         self.radius = np.random.uniform(1, (9 * self.limit))
         self.length = self.radius - (self.radius * math.sin(math.radians(45)))
         self.width = self.radius - (self.radius * math.sin(math.radians(45)))
-        self.depth = 10.0004
+        self.depth = 10
+        self.negative_start_point = -0.02
+        self.positive_start_point = 10.02
 
-        self.negative_start_point = -0.0002
-        self.positive_start_point = 10.0002
+        self.max_volume = 177
+        self.max_manufacturing_time = 0.5
+        self.manufacturing_time_side_supplement = 0.16
+        self.manufacturing_time_bottom_supplement = 1
 
         self.round_vectors = {
             # front side top edge
@@ -156,12 +160,20 @@ class Round:
             "direction_12": self.depth * mdc.Z,
         }
 
+    def manufacturing_time_calculation(self, round):
+        manufacturing_time = self.max_manufacturing_time * (round.volume() / self.max_volume)
+        if self.dir in ["direction_7", "direction_8", "direction_11", "direction_12"]:
+            manufacturing_time += self.manufacturing_time_side_supplement
+        if self.dir in ["direction_2", "direction_4", "direction_6", "direction_10"]:
+            manufacturing_time += self.manufacturing_time_bottom_supplement
+        return manufacturing_time
+
     def transformation(self):
         _round = [mdc.Segment(self.round_vectors[self.dir]["vector_A"], self.round_vectors[self.dir]["vector_B"]),
                   mdc.Segment(self.round_vectors[self.dir]["vector_B"], self.round_vectors[self.dir]["vector_C"]),
                   mdc.ArcThrough(self.round_vectors[self.dir]["vector_C"], self.round_vectors[self.dir]["vector_D"],
                                  self.round_vectors[self.dir]["vector_A"])]
-
         _round = mdc.extrusion(self.depth[self.dir], mdc.flatsurface(_round))
+        _manufacturing_time = round(self.manufacturing_time_calculation(_round), 4)
 
-        return _round
+        return _round, _manufacturing_time

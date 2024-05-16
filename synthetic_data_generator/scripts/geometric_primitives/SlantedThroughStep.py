@@ -6,12 +6,17 @@ class SlantedThroughStep:
     def __init__(self, limit):
         self.dir = np.random.choice(["direction_1", "direction_2", "direction_3", "direction_4", "direction_5",
                                      "direction_6", "direction_7", "direction_8"])
+
         self.limit = limit
         self.width_A = np.random.uniform(1, (9 * self.limit))
         self.width_B = np.random.uniform(1, (9 * self.limit))
         self.depth = np.random.uniform(1, 9)
-        self.negative_start_point = -0.0002
-        self.positive_start_point = 10.0002
+        self.negative_start_point = -0.02
+        self.positive_start_point = 10.02
+
+        self.max_volume = 810
+        self.max_manufacturing_time = 1.5
+        self.manufacturing_time_bottom_supplement = 1
 
         self.slanted_vectors = {
             # back top
@@ -97,6 +102,12 @@ class SlantedThroughStep:
                       "direction_7": -self.depth * mdc.Z,
                       "direction_8": self.depth * mdc.Z}
 
+    def manufacturing_time_calculation(self, slanted_through_step):
+        manufacturing_time = self.max_manufacturing_time * (slanted_through_step.volume() / self.max_volume)
+        if self.dir in ["direction_2", "direction_4", "direction_6", "direction_10"]:
+            manufacturing_time += self.manufacturing_time_bottom_supplement
+        return manufacturing_time
+
     def transformation(self):
         _slanted_through_step = [
             mdc.Segment(self.slanted_vectors[self.dir]["vector_A"], self.slanted_vectors[self.dir]["vector_B"]),
@@ -105,5 +116,6 @@ class SlantedThroughStep:
             mdc.Segment(self.slanted_vectors[self.dir]["vector_D"], self.slanted_vectors[self.dir]["vector_A"])]
 
         _slanted_through_step = mdc.extrusion(self.depth[self.dir], mdc.flatsurface(_slanted_through_step))
+        _manufacturing_time = round(self.manufacturing_time_calculation(_slanted_through_step), 4)
 
-        return _slanted_through_step
+        return _slanted_through_step, _manufacturing_time

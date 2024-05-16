@@ -1,20 +1,27 @@
 import math
+
 import numpy as np
 import madcad as mdc
 
 
-class TriangularPassage:
+class Triangle:
     def __init__(self, limit):
         self.dir = np.random.choice(["direction_1", "direction_2", "direction_3", "direction_4", "direction_5",
                                      "direction_6"])
+
         self.limit = limit
         self.length = np.random.uniform(1, 9 * self.limit)
         self.pos_x = np.random.uniform(0.5, 9.5 - self.length)
         self.pos_y = np.random.uniform(0.5, 9.5 - self.length)
-        self.negative_start_point = -0.0002
-        self.positive_start_point = 10.0002
-        self.depth = 10.0004
+        self.negative_start_point = -0.02
+        self.positive_start_point = 10.02
+        self.depth = np.random.uniform(1, 10)
         self.angle = math.sin(math.radians(60))
+
+        self.max_volume = 316
+        self.max_manufacturing_time = 1
+        self.manufacturing_time_side_supplement = 0.16
+        self.manufacturing_time_bottom_supplement = 1
 
         self.triangle_vectors = {
             "direction_1": [mdc.vec3(self.pos_x + self.length, self.pos_y, self.negative_start_point),
@@ -57,11 +64,21 @@ class TriangularPassage:
             "direction_6": -self.depth * mdc.X,
         }
 
+    def manufacturing_time_calculation(self, triangle):
+        manufacturing_time = self.max_manufacturing_time * (triangle.volume() / self.max_volume)
+        if self.dir in ["direction_3", "direction_4", "direction_5", "direction_6"]:
+            manufacturing_time += self.manufacturing_time_side_supplement
+        if self.dir == "direction_1":
+            manufacturing_time += self.manufacturing_time_bottom_supplement
+        return manufacturing_time
+
+
     def transformation(self):
         _triangular_primitive = [mdc.Segment(self.triangle_vectors[self.dir][0], self.triangle_vectors[self.dir][1]),
                                  mdc.Segment(self.triangle_vectors[self.dir][1], self.triangle_vectors[self.dir][2]),
                                  mdc.Segment(self.triangle_vectors[self.dir][2], self.triangle_vectors[self.dir][0])],
 
-        _triangular_passage = mdc.extrusion(self.dept[self.dir], mdc.flatsurface(_triangular_primitive))
+        _triangle = mdc.extrusion(self.dept[self.dir], mdc.flatsurface(_triangular_primitive))
+        _manufacturing_time = round(self.manufacturing_time_calculation(_triangle), 4)
 
-        return _triangular_passage
+        return _triangle, _manufacturing_time

@@ -1,7 +1,7 @@
 class HyperParameter:
     def __init__(self, trial, network_model):
         self.params = {
-            "batch_size": trial.suggest_categorical("batch_size", [1]),
+            "batch_size": trial.suggest_categorical("batch_size", [2]),
             "dropout_probability": trial.suggest_categorical("dropout_probability", [0.2]), #Feast: 0.5, Dropout: 0.1
             "learning_rate": trial.suggest_categorical("learning_rate", [0.001]),
         }
@@ -61,6 +61,10 @@ class HyperParameter:
             self.params.update({
                 "number_conv_layers": trial.suggest_categorical("conv_layer", [2, 3, 4]),
                 "hidden_channels": trial.suggest_categorical("hidden_channels", [16, 32, 64, 128, 256, 512]),
+            })
+        elif network_model == "GraphConv":
+            self.params.update({
+                "hidden_channels": trial.suggest_categorical("hidden_channels", [512]),
             })
         else:
             raise ValueError(f"Invalid Network: {network_model}")

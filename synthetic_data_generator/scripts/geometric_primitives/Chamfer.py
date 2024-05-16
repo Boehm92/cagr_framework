@@ -7,12 +7,18 @@ class Chamfer:
         self.dir = np.random.choice(["direction_1", "direction_2", "direction_3", "direction_4", "direction_5",
                                      "direction_6", "direction_7", "direction_8", "direction_9", "direction_10",
                                      "direction_11", "direction_12"])
+
         self.limit = limit
-        self.depth = 10.0004
+        self.depth = 10.02
         self.X = np.random.uniform(0.5, 9 * self.limit)
         self.Y = np.random.uniform(0.5, 9.5 * self.limit)
-        self.negative_start_point = -0.0002
-        self.positive_start_point = 10.0002
+        self.negative_start_point = -0.02
+        self.positive_start_point = 10.02
+
+        self.max_volume = 405
+        self.max_manufacturing_time = 1.33
+        self.manufacturing_time_side_supplement = 0.16
+        self.manufacturing_time_bottom_supplement = 1
 
         self.chamfer_vectors = {
             # front side left edge
@@ -40,7 +46,6 @@ class Chamfer:
                 "vector_C": mdc.vec3(self.negative_start_point, self.negative_start_point, self.positive_start_point),
                 "vector_B": mdc.vec3(self.negative_start_point, self.negative_start_point, self.Y)
             },
-
             # right side bottom edge
             "direction_5": {
                 "vector_A": mdc.vec3(self.positive_start_point, self.negative_start_point, self.X, ),
@@ -107,10 +112,19 @@ class Chamfer:
             "direction_12": self.depth * mdc.X,
         }
 
+    def manufacturing_time_calculation(self, chamfer):
+        manufacturing_time = self.max_manufacturing_time * (chamfer.volume() / self.max_volume)
+        if self.dir in ["direction_1", "direction_3", "direction_9", "direction_11"]:
+            manufacturing_time += self.manufacturing_time_side_supplement
+        if self.dir in ["direction_2", "direction_5", "direction_8", "direction_10"]:
+            manufacturing_time += self.manufacturing_time_bottom_supplement
+        return manufacturing_time
+
     def transformation(self):
         _chamfer = [mdc.Segment(self.chamfer_vectors[self.dir]["vector_A"], self.chamfer_vectors[self.dir]["vector_B"]),
                     mdc.Segment(self.chamfer_vectors[self.dir]["vector_B"], self.chamfer_vectors[self.dir]["vector_C"]),
                     mdc.Segment(self.chamfer_vectors[self.dir]["vector_C"], self.chamfer_vectors[self.dir]["vector_A"])]
         _chamfer = mdc.extrusion(self.depth[self.dir], mdc.flatsurface(_chamfer))
+        _manufacturing_time = round(self.manufacturing_time_calculation(_chamfer), 4)
 
-        return _chamfer
+        return _chamfer, _manufacturing_time

@@ -2,9 +2,9 @@ import torch
 from thop import profile
 from statistics import mean
 import torch.nn.functional as f
-from torch_geometric.nn import SAGEConv
+from torch_geometric.nn import SAGEConv, global_max_pool
 from sklearn.metrics import f1_score
-
+from torch.nn import Sequential, Linear, ReLU, Dropout
 
 class SageGnNetwork(torch.nn.Module):
     def __init__(self, dataset, device, hyper_parameter):
@@ -17,6 +17,7 @@ class SageGnNetwork(torch.nn.Module):
         self.hidden_channels = hyper_parameter.hidden_channels
         self.aggr = hyper_parameter.aggr
 
+
         self.conv1 = SAGEConv(dataset.num_features, self.hidden_channels, self.aggr)
         if self.number_conv_layers > 1:
             self.conv2 = SAGEConv(self.hidden_channels, self.hidden_channels, self.aggr)
@@ -26,6 +27,12 @@ class SageGnNetwork(torch.nn.Module):
             self.conv4 = SAGEConv(self.hidden_channels, self.hidden_channels, self.aggr)
         if self.number_conv_layers > 4:
             self.conv5 = SAGEConv(self.hidden_channels, dataset.num_classes, self.aggr)
+
+        self.dropout = Dropout(self.dropout_probability)
+        self.lin1 = Linear(self.hidden_channels, self.hidden_channels // 2)  # First Linear layer
+        self.lin2 = Linear(self.hidden_channels // 2, 1)  # Output layer for regression
+
+
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
@@ -48,7 +55,12 @@ class SageGnNetwork(torch.nn.Module):
             x = x.relu()
             x = f.dropout(x, p=self.dropout_probability, training=self.training)
 
-        return f.log_softmax(x, dim=1)
+        x = global_max_pool(x, self.batch_size)
+        x = self.lin1(x)
+        x = x.reLU()()
+        x = self.lin2(x)
+
+        return x.squeeze()
 
     def train_loss(self, loader, criterion, optimizer):
         self.train()
@@ -58,12 +70,12 @@ class SageGnNetwork(torch.nn.Module):
             data = data.to(self.device)
             optimizer.zero_grad()  # Clear gradients.
             out = self(data.x, data.edge_index)  # Perform a single forward pass.
+            print(out)
             loss = criterion(out, data.y)
-            total_loss += loss.item() * data.num_graphs
             loss.backward()  # Derive gradients.
             optimizer.step()  # Update parameters based on gradients.
 
-        return total_loss / len(loader.dataset)
+        return loss
 
     def val_loss(self, loader, criterion):
         self.eval()
@@ -71,35 +83,10 @@ class SageGnNetwork(torch.nn.Module):
         total_loss = 0
         for data in loader:  # Iterate in batches over the training dataset.
             data = data.to(self.device)
-            out = self(data.x, data.edge_index)  # Perform a single forward pass.
-            loss = criterion(out, data.y)
-            total_loss += loss.item() * data.num_graphs
+            out = self(data.x, data.edge_index).clamp(min=0, max=50)  # Perform a single forward pass.
+            target = data.y.float()
+            # print("out: ", out)
+            # print("target: ", target)
+            loss = f.mse_loss(out, target).sqrt()
 
-        return total_loss / len(loader.dataset)
-
-    @torch.no_grad()
-    def accuracy(self, loader):
-        self.eval()
-        all_predicted_labels = []
-        all_true_labels = []
-        flops_list = []
-        params_list = []
-
-        for index, data in enumerate(loader):
-            print(index)
-            out = self(data.x.to(self.device), data.edge_index.to(self.device))
-            predicted_labels = out.argmax(dim=1).cpu().numpy()
-            true_labels = data.y.cpu().numpy()
-            all_predicted_labels.extend(predicted_labels)
-            all_true_labels.extend(true_labels)
-
-            flops, params = profile(self, inputs=(data.x.to(self.device), data.edge_index.to(self.device),),
-                                    verbose=False)
-            print(flops)
-            print(params)
-            flops_list.append(flops)
-            params_list.append(params)
-
-        f1 = f1_score(all_true_labels, all_predicted_labels, average='micro')
-
-        return f1, mean(flops_list), mean(params_list)
+        return float(loss)

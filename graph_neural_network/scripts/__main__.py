@@ -5,7 +5,7 @@ import optuna
 import argparse
 import torch
 from graph_neural_network.scripts.utils.DataImporter import DataImporter
-from graph_neural_network.scripts.MachiningFeatureLocalizer import MachiningFeatureLocalizer
+from graph_neural_network.scripts.ManufacturingTimeRegression import ManufacturingTimeRegression
 
 from graph_neural_network.scripts.network_models.GcNetwork import GcNetwork
 from graph_neural_network.scripts.network_models.DgcnNetwork import DgcnNetwork
@@ -16,10 +16,11 @@ from graph_neural_network.scripts.network_models.GATV2Network import GATV2Networ
 from graph_neural_network.scripts.network_models.ChebNetwork import ChebNetwork
 from graph_neural_network.scripts.network_models.ArmaNetwork import ArmaNetwork
 from graph_neural_network.scripts.network_models.AgnNetwork import AgnNetwork
+from graph_neural_network.scripts.network_models.GraphConv import GraphConv
 
 _parser = argparse.ArgumentParser(description='Base configuration of the synthetic data generator')
 _parser.add_argument('--application_mode',
-                     dest='application_mode', default='test', type=str,
+                     dest='application_mode', default='training', type=str,
                      help='The application modes has "trained" and "test". When set to trained the framework uses the'
                           'TestModel class to train graph neural network. Please note, if you want to test different'
                           'graph conv layer, the TestModel class must be configured with accordingly. For example,'
@@ -34,7 +35,7 @@ _parser.add_argument('--application_mode',
                           'procedure uses a so called hyperparameter optimization. For more info about this '
                           'optimization process, please visit: https://optuna.org/')
 _parser.add_argument('--project_name',
-                     dest='project_name', default='CAFL', type=str,
+                     dest='project_name', default='CAGR', type=str,
                      help='This name belongs to the wandb project which is created when the code is started. The wandb '
                           'code publishes training parameters like train_accuracy to your personal wandb dashboard. You'
                           'just have to register at www.wandb.ai and follow the instructions at: '
@@ -72,14 +73,14 @@ _parser.add_argument('--test_dataset',
                           'should still hold at least one file, else the importer runs into an exception'
                           '(Not used for testing)')
 _parser.add_argument('--amount_training_data',
-                     dest='amount_training_data', default=45564, type=int,
+                     dest='amount_training_data', default=16200, type=int,
                      help='This variable allows you to separate the training data, taken from the "data -> cad ->'
                           'training" folder, into training and validation datasets. For example, if you have 24000 '
                           'cad models, if you type in value 22000 models, then 22000 models will be utilized for '
                           'training and 2000 models for validation. NOTE: The cad models will be first converted into a'
                           'fitting graph representation and saved into the data -> graph -> training folder.')
 _parser.add_argument('--amount_validation_data',
-                     dest='amount_validation_data', default=11391, type=int,
+                     dest='amount_validation_data', default=1800, type=int,
                      help='')
 _parser.add_argument('--device',
                      dest='device', default=("cuda" if torch.cuda.is_available() else "cpu"), type=str,
@@ -99,10 +100,10 @@ _parser.add_argument('--max_epoch', dest='max_epoch', default=100, type=int,
                           'most of our experiments')
 _parser.add_argument('--network_model', dest='network_model', default=DgcnNetwork,
                      help='GcNetwork, DgcnNetwork, SageGnNetwork, FeaStNetwork, GATNetwork, GATV2Network, ChebNetwork,'
-                          'ArmaNetwork, AgnNetwork')
+                          'ArmaNetwork, AgnNetwork, GraphConv')
 _parser.add_argument('--network_model_id', dest='network_model_id', default="DgcnNetwork", type=str,
                      help='GcNetwork, DgcnNetwork, SageGnNetwork, FeaStNetwork, GATNetwork, GATV2Network, ChebNetwork,'
-                          'ArmaNetwork, AgnNetwork')
+                          'ArmaNetwork, AgnNetwork, GraphConv')
 
 if __name__ == '__main__':
 
@@ -110,8 +111,8 @@ if __name__ == '__main__':
     _study = optuna.create_study(direction="maximize", study_name=_config.study_name)
 
     if _config.application_mode == "training":
-        _study.optimize(lambda trial: MachiningFeatureLocalizer(_config, trial).training(),
+        _study.optimize(lambda trial:  ManufacturingTimeRegression(_config, trial).training(),
                         n_trials=_config.hyperparameter_trials)
     elif _config.application_mode == "test":
-        _study.optimize(lambda trial: MachiningFeatureLocalizer(_config, trial).test(),
+        _study.optimize(lambda trial:  ManufacturingTimeRegression(_config, trial).test(),
                         n_trials=_config.hyperparameter_trials)

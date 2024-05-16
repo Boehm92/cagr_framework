@@ -160,3 +160,11 @@ cython_debug/
 #.idea/
 /graph_neural_network/venv_gnn_windows/
 /synthetic_data_generator/venv_synthetic_data_generator/
+/data/
+/data/cad/
+/data/cad/test/
+/data/cad/training/
+/graph_neural_network/scripts/wandb/
+.stl
+.STL
+.csv
