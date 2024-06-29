@@ -1,4 +1,4 @@
-CONFIGURABLE AUTOMATED FEATURE (CAFR) FRAMEWORK 
+CONFIGURABLE AUTOMATED FEATURE (CAGR) FRAMEWORK 
 
 Graph Neural Network to recognize machining features in .stl CAD data
 1. Create a folder called data with the following structure the CAD-, Label-, and Graph data:
@@ -15,7 +15,7 @@ Graph Neural Network to recognize machining features in .stl CAD data
    .stl file in the FeatureNet dataset. Also, you have to change the .STL file ending for each CAD model to .stl
    
    For easier implementation, we prepared the FeatureNet dataset with the right naming and fitting label files as well 
-   as training and test data created by this framework via https://drive.google.com/drive/folders/1GMK0kuvmN89UR-tYAEZG4LtOYFXeB7-L?usp=sharing
+   as training and test data created by this framework via https://drive.google.com/drive/folders/15Y_kbcCSYIIO_-0gb5u5G85poCT34qY8?usp=drive_link
 
 2. Create a python virtual environment for the synthetic_data_generator:
    1. Environment should be created with an interpreter for python 3.10
