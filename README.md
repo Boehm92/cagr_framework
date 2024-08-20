@@ -1,6 +1,6 @@
 CONFIGURABLE AUTOMATED FEATURE (CAGR) FRAMEWORK 
 
-Graph Neural Network to recognize machining features in .stl CAD data
+Graph Neural Network to estimate manufacturing time from .stl CAD data
 1. Create a folder called data with the following structure the CAD-, Label-, and Graph data:
       1. data
          1. cad
